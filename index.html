@@ -3,93 +3,1208 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>線上擲骰子</title>
+    <title>線上 3D 擲骰子遊樂場 | Premium Dice Roller</title>
+    <!-- 引入 Outfit 現代字型與 Noto Sans TC 繁體中文 -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet" />
     <style>
-      body {
-        background: #f2f6ff;
-        color: #222;
-        font-family: "Noto Sans TC", "Segoe UI", Arial, sans-serif;
+      /* ==========================================
+         1. 設計系統與全域樣式 (Design System)
+         ========================================== */
+      :root {
+        --font-primary: 'Outfit', 'Noto Sans TC', sans-serif;
+        
+        /* 玻璃擬態 (Glassmorphism) 全域底色與邊框 */
+        --glass-bg: rgba(22, 28, 45, 0.6);
+        --glass-border: rgba(255, 255, 255, 0.08);
+        --glass-shadow: rgba(0, 0, 0, 0.4);
+        --text-main: #f8fafc;
+        --text-muted: #94a3b8;
+        
+        /* 預設經典藍紫色調 */
+        --accent-color: #6366f1;
+        --accent-hover: #4f46e5;
+        --accent-shadow: rgba(99, 102, 241, 0.4);
+        
+        /* 經典主題骰子樣式 (Classic White) */
+        --dice-bg: linear-gradient(135deg, #ffffff 0%, #e2e8f0 100%);
+        --dice-border: #cbd5e1;
+        --dice-dot-color: #1e293b;
+        --dice-dot-one-color: #ef4444; /* 經典紅點一 */
+        --dice-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+      }
+
+      /* 霓虹 aurora 主題 */
+      body.theme-neon {
+        --accent-color: #06b6d4;
+        --accent-hover: #0891b2;
+        --accent-shadow: rgba(6, 182, 212, 0.4);
+        --dice-bg: linear-gradient(135deg, rgba(15, 23, 42, 0.85) 0%, rgba(30, 41, 59, 0.85) 100%);
+        --dice-border: rgba(6, 182, 212, 0.6);
+        --dice-dot-color: #00f3ff;
+        --dice-dot-one-color: #00f3ff;
+        --dice-shadow: 0 0 15px rgba(6, 182, 212, 0.5);
+      }
+
+      /* 賽博龐克暗黑主題 */
+      body.theme-cyberpunk {
+        --accent-color: #f43f5e;
+        --accent-hover: #e11d48;
+        --accent-shadow: rgba(244, 63, 94, 0.4);
+        --dice-bg: linear-gradient(135deg, #1e1b4b 0%, #311042 100%);
+        --dice-border: rgba(244, 63, 94, 0.8);
+        --dice-dot-color: #00ffcc;
+        --dice-dot-one-color: #f43f5e;
+        --dice-shadow: 0 0 20px rgba(244, 63, 94, 0.6);
+      }
+
+      /* 奢華黃金主題 */
+      body.theme-gold {
+        --accent-color: #fbbf24;
+        --accent-hover: #d97706;
+        --accent-shadow: rgba(251, 191, 36, 0.4);
+        --dice-bg: linear-gradient(135deg, #fffbeb 0%, #fde68a 50%, #f59e0b 100%);
+        --dice-border: #b45309;
+        --dice-dot-color: #1e1b4b;
+        --dice-dot-one-color: #b45309;
+        --dice-shadow: 0 8px 20px rgba(217, 119, 6, 0.35);
+      }
+
+      * {
+        box-sizing: border-box;
         margin: 0;
+        padding: 0;
+      }
+
+      body {
+        background: radial-gradient(circle at 50% 50%, #111827 0%, #030712 100%);
+        color: var(--text-main);
+        font-family: var(--font-primary);
         min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        overflow-x: hidden;
+      }
+
+      /* ==========================================
+         2. 版面配置與容器 (Layout & Containers)
+         ========================================== */
+      .app-header {
+        text-align: center;
+        margin-bottom: 24px;
+      }
+
+      .app-header h1 {
+        font-size: 2.5rem;
+        font-weight: 800;
+        letter-spacing: -0.05em;
+        margin-bottom: 8px;
+        background: linear-gradient(135deg, #a5b4fc 0%, #6366f1 50%, #38bdf8 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      .app-header p {
+        color: var(--text-muted);
+        font-size: 0.95rem;
+        font-weight: 300;
+      }
+
+      .dashboard {
+        display: grid;
+        grid-template-columns: 320px 1fr;
+        gap: 24px;
+        width: min(1000px, 95vw);
+        margin: 0 auto;
+      }
+
+      /* 玻璃擬態卡片基本樣式 */
+      .panel {
+        background: var(--glass-bg);
+        backdrop-filter: blur(16px) saturate(180%);
+        -webkit-backdrop-filter: blur(16px) saturate(180%);
+        border: 1px solid var(--glass-border);
+        border-radius: 24px;
+        padding: 24px;
+        box-shadow: 0 10px 30px var(--glass-shadow);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+      }
+
+      .panel:hover {
+        box-shadow: 0 15px 40px rgba(0, 0, 0, 0.5);
+      }
+
+      /* 左側控制面板與統計 */
+      .sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+      }
+
+      /* ==========================================
+         3. 控制區與設定 (Controls UI)
+         ========================================== */
+      .section-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #f1f5f9;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        padding-bottom: 8px;
+      }
+
+      .control-group {
+        margin-bottom: 16px;
+      }
+
+      .control-group label {
+        display: block;
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        margin-bottom: 8px;
+      }
+
+      .select-custom {
+        width: 100%;
+        background: rgba(15, 23, 42, 0.6);
+        border: 1px solid var(--glass-border);
+        border-radius: 12px;
+        color: var(--text-main);
+        padding: 10px 14px;
+        font-family: var(--font-primary);
+        font-size: 0.9rem;
+        cursor: pointer;
+        outline: none;
+        transition: border-color 0.2s;
+      }
+
+      .select-custom:focus {
+        border-color: var(--accent-color);
+      }
+
+      .toggle-group {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: rgba(15, 23, 42, 0.3);
+        padding: 10px 14px;
+        border-radius: 12px;
+        border: 1px solid var(--glass-border);
+      }
+
+      .toggle-group span {
+        font-size: 0.9rem;
+      }
+
+      /* Switch 樣式 */
+      .switch {
+        position: relative;
+        display: inline-block;
+        width: 44px;
+        height: 24px;
+      }
+
+      .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+
+      .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #334155;
+        transition: .3s;
+        border-radius: 24px;
+      }
+
+      .slider:before {
+        position: absolute;
+        content: "";
+        height: 16px;
+        width: 16px;
+        left: 4px;
+        bottom: 4px;
+        background-color: white;
+        transition: .3s;
+        border-radius: 50%;
+      }
+
+      input:checked + .slider {
+        background-color: var(--accent-color);
+      }
+
+      input:checked + .slider:before {
+        transform: translateX(20px);
+      }
+
+      /* 擲骰子主按鈕 */
+      .btn-roll {
+        width: 100%;
+        background: var(--accent-color);
+        color: white;
+        border: none;
+        border-radius: 14px;
+        padding: 16px;
+        font-family: var(--font-primary);
+        font-size: 1.1rem;
+        font-weight: 700;
+        cursor: pointer;
+        box-shadow: 0 4px 15px var(--accent-shadow);
+        transition: transform 0.2s, background-color 0.2s, box-shadow 0.2s;
         display: flex;
         align-items: center;
         justify-content: center;
+        gap: 8px;
+        margin-top: 8px;
       }
-      .container {
-        background: white;
-        border-radius: 20px;
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-        padding: 32px;
-        width: min(420px, 90vw);
+
+      .btn-roll:hover {
+        background: var(--accent-hover);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px var(--accent-shadow);
+      }
+
+      .btn-roll:active {
+        transform: translateY(1px);
+      }
+
+      .btn-roll:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      /* ==========================================
+         4. 遊戲檯面與 3D 骰子 (3D Dice Board)
+         ========================================== */
+      .board-panel {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        min-height: 380px;
+        position: relative;
+      }
+
+      .felt-table {
+        flex-grow: 1;
+        background: radial-gradient(circle, #1e293b 0%, #0f172a 100%);
+        border-radius: 18px;
+        border: 1px dashed rgba(255, 255, 255, 0.1);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 40px;
+        padding: 40px 20px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      /* 桌面震動效果 */
+      @keyframes tableShake {
+        0%, 100% { transform: translate(0, 0); }
+        10%, 30%, 50%, 70%, 90% { transform: translate(-3px, -2px); }
+        20%, 40%, 60%, 80% { transform: translate(3px, 2px); }
+      }
+      .felt-table.shaking {
+        animation: tableShake 0.3s ease-in-out;
+      }
+
+      /* 3D 視角容器 */
+      .dice-scene {
+        width: 80px;
+        height: 80px;
+        perspective: 600px;
+        position: relative;
+      }
+
+      /* 骰子陰影 */
+      .dice-shadow {
+        position: absolute;
+        bottom: -20px;
+        left: 10px;
+        width: 60px;
+        height: 8px;
+        background: rgba(0, 0, 0, 0.5);
+        border-radius: 50%;
+        filter: blur(4px);
+        transition: transform 1.5s cubic-bezier(0.25, 1, 0.5, 1), opacity 1.5s cubic-bezier(0.25, 1, 0.5, 1);
+        transform: scale(1);
+        opacity: 0.5;
+        pointer-events: none;
+      }
+
+      @keyframes shadowBounce {
+        0% { transform: scale(1); opacity: 0.5; }
+        25% { transform: scale(0.5); opacity: 0.15; }
+        60% { transform: scale(0.95); opacity: 0.4; }
+        100% { transform: scale(1); opacity: 0.5; }
+      }
+      .dice-shadow.bouncing {
+        animation: shadowBounce 1.5s cubic-bezier(0.25, 1, 0.5, 1);
+      }
+
+      /* 3D 骰子立方體 */
+      .cube {
+        width: 100%;
+        height: 100%;
+        position: absolute;
+        transform-style: preserve-3d;
+        /* 預設停止在 1 點的面 */
+        transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg);
+        transition: transform 1.5s cubic-bezier(0.25, 1, 0.5, 1);
+      }
+
+      @keyframes cubeBounce {
+        0% { transform: translateY(0); }
+        25% { transform: translateY(-50px); }
+        60% { transform: translateY(-5px); }
+        100% { transform: translateY(0); }
+      }
+      .cube.bouncing {
+        animation: cubeBounce 1.5s cubic-bezier(0.25, 1, 0.5, 1);
+      }
+
+      /* 骰子面樣式 */
+      .face {
+        position: absolute;
+        width: 80px;
+        height: 80px;
+        border-radius: 16px;
+        background: var(--dice-bg);
+        border: 2px solid var(--dice-border);
+        box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.1), var(--dice-shadow);
+        
+        /* 點數排版使用 3x3 Grid */
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        grid-template-rows: repeat(3, 1fr);
+        padding: 8px;
+        box-sizing: border-box;
+        
+        /* 提高 3D 算圖精細度，避免旋轉時產生鋸齒 */
+        backface-visibility: visible;
+      }
+
+      /* 骰子點數點點 */
+      .dot {
+        width: 13px;
+        height: 13px;
+        border-radius: 50%;
+        background: var(--dice-dot-color);
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.35);
+        justify-self: center;
+        align-self: center;
+      }
+
+      /* 1 點的特別樣式：經典的大紅點 */
+      .face.front .dot {
+        width: 20px;
+        height: 20px;
+        background: var(--dice-dot-one-color);
+        box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.25);
+      }
+
+      /* 定義 3D 立體方塊的 6 個面位置 */
+      .face.front  { transform: rotateY(  0deg) translateZ(40px); }
+      .face.top    { transform: rotateX( 90deg) translateZ(40px); }
+      .face.right  { transform: rotateY( 90deg) translateZ(40px); }
+      .face.left   { transform: rotateY(-90deg) translateZ(40px); }
+      .face.bottom { transform: rotateX(-90deg) translateZ(40px); }
+      .face.back   { transform: rotateY(180deg) translateZ(40px); }
+
+      /* 當前結果橫幅 */
+      .result-banner {
+        text-align: center;
+        margin-top: 16px;
+        min-height: 48px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .result-sum {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: #fff;
+        text-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+      }
+
+      .result-detail {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        margin-top: 4px;
+      }
+
+      /* ==========================================
+         5. 統計數據與圖表 (Stats UI)
+         ========================================== */
+      .stats-panel {
+        flex-grow: 1;
+      }
+
+      .stats-summary {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-bottom: 20px;
+      }
+
+      .stat-card {
+        background: rgba(15, 23, 42, 0.4);
+        border: 1px solid var(--glass-border);
+        border-radius: 12px;
+        padding: 12px;
         text-align: center;
       }
-      h1 {
-        margin: 0 0 16px;
-        font-size: 2rem;
+
+      .stat-card-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--accent-color);
+        margin-bottom: 2px;
       }
-      .dice {
-        font-size: 6rem;
-        margin: 24px 0;
-        display: inline-block;
-        width: 140px;
-        height: 140px;
-        line-height: 140px;
-        border-radius: 24px;
-        background: linear-gradient(180deg, #4a90e2 0%, #2f6ccf 100%);
-        color: white;
-        box-shadow: 0 18px 35px rgba(46, 78, 150, 0.35);
+
+      .stat-card-label {
+        font-size: 0.75rem;
+        color: var(--text-muted);
       }
-      button {
-        background: #4a90e2;
-        border: none;
-        border-radius: 999px;
-        color: white;
+
+      /* 統計長條圖 */
+      .chart-container {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .chart-row {
+        display: grid;
+        grid-template-columns: 24px 1fr 28px;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .chart-label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #f1f5f9;
+        text-align: right;
+      }
+
+      .chart-track {
+        background: rgba(15, 23, 42, 0.6);
+        height: 12px;
+        border-radius: 6px;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.03);
+      }
+
+      .chart-bar {
+        height: 100%;
+        background: linear-gradient(90deg, var(--accent-color), #818cf8);
+        width: 0%;
+        border-radius: 6px;
+        transition: width 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+        box-shadow: 0 0 8px var(--accent-shadow);
+      }
+
+      .chart-val {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        text-align: left;
+        font-weight: 500;
+      }
+
+      .btn-clear-stats {
+        background: none;
+        border: 1px solid rgba(239, 68, 68, 0.4);
+        color: #ef4444;
+        font-family: var(--font-primary);
+        font-size: 0.8rem;
+        padding: 6px 12px;
+        border-radius: 8px;
         cursor: pointer;
-        font-size: 1rem;
-        padding: 14px 24px;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        transition: all 0.2s;
+        margin-top: 16px;
+        display: block;
+        width: max-content;
+        margin-left: auto;
       }
-      button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 12px 24px rgba(74, 144, 226, 0.3);
+
+      .btn-clear-stats:hover {
+        background: rgba(239, 68, 68, 0.1);
+        border-color: #ef4444;
       }
-      .result {
-        margin-top: 18px;
-        font-size: 1rem;
-        color: #555;
+
+      /* ==========================================
+         6. 歷史紀錄 (History UI)
+         ========================================== */
+      .history-panel {
+        display: flex;
+        flex-direction: column;
+        max-height: 380px;
+      }
+
+      .history-list {
+        flex-grow: 1;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding-right: 4px;
+      }
+
+      /* 自訂捲軸樣式 */
+      .history-list::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      .history-list::-webkit-scrollbar-track {
+        background: transparent;
+      }
+
+      .history-list::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 3px;
+      }
+
+      .history-list::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.2);
+      }
+
+      .history-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: rgba(15, 23, 42, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.03);
+        padding: 10px 14px;
+        border-radius: 12px;
+        font-size: 0.85rem;
+        animation: slideIn 0.3s ease-out;
+      }
+
+      @keyframes slideIn {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      .history-time {
+        color: var(--text-muted);
+        font-size: 0.75rem;
+      }
+
+      .history-detail {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .history-dice-badge {
+        display: inline-block;
+        width: 22px;
+        height: 22px;
+        line-height: 20px;
+        text-align: center;
+        border-radius: 6px;
+        background: var(--dice-bg);
+        color: var(--dice-dot-color);
+        font-weight: 700;
+        border: 1px solid var(--dice-border);
+        font-size: 0.75rem;
+      }
+
+      .history-sum {
+        font-weight: 700;
+        color: var(--accent-color);
+        font-size: 0.95rem;
+      }
+
+      .no-history {
+        color: var(--text-muted);
+        text-align: center;
+        margin-top: 40px;
+        font-size: 0.85rem;
+        font-style: italic;
+      }
+
+      /* ==========================================
+         7. 響應式佈局微調 (RWD)
+         ========================================== */
+      @media (max-width: 768px) {
+        .dashboard {
+          grid-template-columns: 1fr;
+        }
+        
+        .app-header h1 {
+          font-size: 2rem;
+        }
+
+        .felt-table {
+          gap: 20px;
+          padding: 30px 10px;
+        }
+
+        .dice-scene {
+          width: 70px;
+          height: 70px;
+        }
+
+        .face {
+          width: 70px;
+          height: 70px;
+          padding: 6px;
+        }
+
+        .face.front .dot {
+          width: 16px;
+          height: 16px;
+        }
+
+        .dot {
+          width: 11px;
+          height: 11px;
+        }
+
+        .face.front  { transform: rotateY(  0deg) translateZ(35px); }
+        .face.top    { transform: rotateX( 90deg) translateZ(35px); }
+        .face.right  { transform: rotateY( 90deg) translateZ(35px); }
+        .face.left   { transform: rotateY(-90deg) translateZ(35px); }
+        .face.bottom { transform: rotateX(-90deg) translateZ(35px); }
+        .face.back   { transform: rotateY(180deg) translateZ(35px); }
+
+        .dice-shadow {
+          width: 50px;
+          left: 10px;
+          bottom: -18px;
+        }
       }
     </style>
   </head>
   <body>
-    <div class="container">
-      <h1>擲骰子遊戲</h1>
-      <div class="dice" id="diceFace">1</div>
-      <div>
-        <button id="rollButton">擲骰子</button>
+    <!-- 頂部標題區 -->
+    <header class="app-header">
+      <h1>線上 3D 擲骰子遊樂場</h1>
+      <p>極致 3D 旋轉物理質感 • 原生網效 Web Audio 合成 • 數據統計分佈</p>
+    </header>
+
+    <!-- 主面板 -->
+    <main class="dashboard">
+      <!-- 左側欄：設定與統計 -->
+      <div class="sidebar">
+        <!-- 控制面板 -->
+        <section class="panel" aria-label="控制設定">
+          <h2 class="section-title">🎲 遊戲設定</h2>
+          
+          <div class="control-group">
+            <label for="diceCountSelect">骰子數量</label>
+            <select id="diceCountSelect" class="select-custom">
+              <option value="1">1 顆骰子</option>
+              <option value="2">2 顆骰子</option>
+              <option value="3">3 顆骰子</option>
+            </select>
+          </div>
+
+          <div class="control-group">
+            <label for="themeSelect">視覺主題</label>
+            <select id="themeSelect" class="select-custom">
+              <option value="classic">經典象牙 (Classic White)</option>
+              <option value="neon">極光霓虹 (Aurora Neon)</option>
+              <option value="cyberpunk">賽博暗黑 (Cyberpunk Pink)</option>
+              <option value="gold">奢華黃金 (Premium Gold)</option>
+            </select>
+          </div>
+
+          <div class="control-group">
+            <div class="toggle-group">
+              <span>啟用清脆音效</span>
+              <label class="switch">
+                <input type="checkbox" id="soundToggle" checked />
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <button id="rollButton" class="btn-roll">
+            <span>開始擲骰！</span>
+          </button>
+        </section>
+
+        <!-- 統計數據面板 -->
+        <section class="panel stats-panel" aria-label="數據統計">
+          <h2 class="section-title">📊 點數分佈統計</h2>
+          
+          <div class="stats-summary">
+            <div class="stat-card">
+              <div class="stat-card-value" id="totalRolls">0</div>
+              <div class="stat-card-label">總擲次數</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card-value" id="averageVal">0.0</div>
+              <div class="stat-card-label">點數平均值</div>
+            </div>
+          </div>
+
+          <!-- 分佈長條圖 -->
+          <div class="chart-container" id="chartContainer">
+            <!-- 點數 1~6 的長條圖項目 -->
+            <div class="chart-row">
+              <span class="chart-label">1⚀</span>
+              <div class="chart-track"><div class="chart-bar" id="bar-1"></div></div>
+              <span class="chart-val" id="val-1">0</span>
+            </div>
+            <div class="chart-row">
+              <span class="chart-label">2⚁</span>
+              <div class="chart-track"><div class="chart-bar" id="bar-2"></div></div>
+              <span class="chart-val" id="val-2">0</span>
+            </div>
+            <div class="chart-row">
+              <span class="chart-label">3⚂</span>
+              <div class="chart-track"><div class="chart-bar" id="bar-3"></div></div>
+              <span class="chart-val" id="val-3">0</span>
+            </div>
+            <div class="chart-row">
+              <span class="chart-label">4⚃</span>
+              <div class="chart-track"><div class="chart-bar" id="bar-4"></div></div>
+              <span class="chart-val" id="val-4">0</span>
+            </div>
+            <div class="chart-row">
+              <span class="chart-label">5⚄</span>
+              <div class="chart-track"><div class="chart-bar" id="bar-5"></div></div>
+              <span class="chart-val" id="val-5">0</span>
+            </div>
+            <div class="chart-row">
+              <span class="chart-label">6⚅</span>
+              <div class="chart-track"><div class="chart-bar" id="bar-6"></div></div>
+              <span class="chart-val" id="val-6">0</span>
+            </div>
+          </div>
+
+          <button id="clearStatsButton" class="btn-clear-stats">清除統計數據</button>
+        </section>
       </div>
-      <div class="result" id="resultText">按下「擲骰子」來開始。</div>
-    </div>
+
+      <!-- 右側欄：骰子展示區與歷史紀錄 -->
+      <div class="sidebar">
+        <!-- 骰子遊戲檯面 -->
+        <section class="panel board-panel" aria-label="遊戲檯面">
+          <h2 class="section-title">🎰 擲骰區</h2>
+          
+          <div class="felt-table" id="feltTable">
+            <!-- 骰子元件將由 JavaScript 動態生成注入 -->
+          </div>
+
+          <div class="result-banner">
+            <div class="result-sum" id="resultSum">準備就緒</div>
+            <div class="result-detail" id="resultDetail">點擊左側「開始擲骰！」按鈕來擲骰子</div>
+          </div>
+        </section>
+
+        <!-- 歷史紀錄面板 -->
+        <section class="panel history-panel" aria-label="滾動歷史">
+          <h2 class="section-title">📜 歷史紀錄</h2>
+          <div class="history-list" id="historyList">
+            <div class="no-history">尚無紀錄</div>
+          </div>
+        </section>
+      </div>
+    </main>
+
     <script>
-      const diceFace = document.getElementById('diceFace');
-      const resultText = document.getElementById('resultText');
+      /* ==========================================
+         8. JavaScript 狀態管理與邏輯
+         ========================================== */
+
+      // 1. 初始化狀態變數
+      let diceCount = 1;
+      let currentTheme = 'classic';
+      let soundEnabled = true;
+      let rollIndex = 0; // 用於累積旋轉角度，確保骰子總是向前旋轉
+
+      // 統計數據狀態 (若 localStorage 有舊資料則載入)
+      let stats = JSON.parse(localStorage.getItem('dice_stats')) || {
+        1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0
+      };
+      
+      // 歷史紀錄狀態
+      let history = JSON.parse(localStorage.getItem('dice_history')) || [];
+
+      // 2. DOM 節點獲取
+      const diceCountSelect = document.getElementById('diceCountSelect');
+      const themeSelect = document.getElementById('themeSelect');
+      const soundToggle = document.getElementById('soundToggle');
       const rollButton = document.getElementById('rollButton');
+      const feltTable = document.getElementById('feltTable');
+      const resultSum = document.getElementById('resultSum');
+      const resultDetail = document.getElementById('resultDetail');
+      const historyList = document.getElementById('historyList');
+      const clearStatsButton = document.getElementById('clearStatsButton');
 
-      function rollDice() {
-        const value = Math.floor(Math.random() * 6) + 1;
-        const faces = {
-          1: '⚀',
-          2: '⚁',
-          3: '⚂',
-          4: '⚃',
-          5: '⚄',
-          6: '⚅'
-        };
+      // 3. Web Audio API 音效合成器
+      // 使用 AudioContext 無需任何外部音效檔案，直接透過震盪器合成清脆的物理碰撞聲
+      let audioCtx = null;
 
-        diceFace.textContent = faces[value];
-        resultText.textContent = `你擲出的點數是 ${value}。`;
+      function initAudio() {
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
       }
 
+      /**
+       * 合成單次的骰子撞擊聲 (Thud/Click)
+       * @param {number} volume - 音量大小 (0.0 ~ 1.0)
+       * @param {number} pitchMultiplier - 頻率乘數，使每次碰撞的音調有些許隨機變化，聽起來更自然
+       */
+      function playBounceSound(volume = 1.0, pitchMultiplier = 1.0) {
+        if (!soundEnabled || !audioCtx) return;
+        
+        // 建立低頻沉悶的木板/桌面撞擊聲 (Triangle Wave)
+        const oscThud = audioCtx.createOscillator();
+        const gainThud = audioCtx.createGain();
+        oscThud.type = 'triangle';
+        oscThud.frequency.setValueAtTime(130 * pitchMultiplier, audioCtx.currentTime);
+        // 使低頻訊號快速向下衰減
+        oscThud.frequency.exponentialRampToValueAtTime(30 * pitchMultiplier, audioCtx.currentTime + 0.1);
+        
+        // 建立高頻清脆的骰子撞擊外殼聲 (Sine Wave)
+        const oscClick = audioCtx.createOscillator();
+        const gainClick = audioCtx.createGain();
+        oscClick.type = 'sine';
+        oscClick.frequency.setValueAtTime(1600 * pitchMultiplier, audioCtx.currentTime);
+        oscClick.frequency.exponentialRampToValueAtTime(800 * pitchMultiplier, audioCtx.currentTime + 0.04);
+        
+        // 音量包絡控制 (Decay Envelope)
+        gainThud.gain.setValueAtTime(0.3 * volume, audioCtx.currentTime);
+        gainThud.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+        
+        gainClick.gain.setValueAtTime(0.2 * volume, audioCtx.currentTime);
+        gainClick.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.04);
+        
+        // 連接節點並播放
+        oscThud.connect(gainThud);
+        gainThud.connect(audioCtx.destination);
+        oscClick.connect(gainClick);
+        gainClick.connect(audioCtx.destination);
+        
+        oscThud.start();
+        oscThud.stop(audioCtx.currentTime + 0.1);
+        oscClick.start();
+        oscClick.stop(audioCtx.currentTime + 0.04);
+      }
+
+      /**
+       * 模擬骰子在一連串滾動中多次彈跳的音效時間軸
+       */
+      function playRollSequenceSound() {
+        if (!soundEnabled) return;
+        initAudio();
+        
+        // 設定一組模擬彈跳的時間點 (秒)
+        const bounces = [0.0, 0.12, 0.28, 0.48, 0.72, 1.0, 1.3];
+        bounces.forEach((delay, index) => {
+          // 隨著彈跳次數增加，音量變小，頻率稍降
+          const volume = Math.max(0.1, 1.0 - (index / bounces.length) * 0.85);
+          const pitch = 0.85 + Math.random() * 0.3; // 加入些許隨機音高
+          
+          setTimeout(() => {
+            playBounceSound(volume, pitch);
+          }, delay * 1000);
+        });
+      }
+
+      // 4. 動態生成 3D 骰子 DOM 結構
+      function renderDiceContainers() {
+        feltTable.innerHTML = '';
+        for (let i = 0; i < diceCount; i++) {
+          // 建立 3D 場景容器
+          const scene = document.createElement('div');
+          scene.className = 'dice-scene';
+          
+          // 建立骰子陰影
+          const shadow = document.createElement('div');
+          shadow.className = 'dice-shadow';
+          shadow.id = `shadow-${i}`;
+          
+          // 建立立方體
+          const cube = document.createElement('div');
+          cube.className = 'cube';
+          cube.id = `cube-${i}`;
+          
+          // 定義 6 個面的點數 Grid 排版
+          // 透過 grid-area 語法將圓點精準放置在 3x3 的相對位置上
+          const facesData = [
+            { name: 'front', dots: ['grid-area: 2 / 2;'] },                                      // 1 點
+            { name: 'top', dots: ['grid-area: 1 / 1;', 'grid-area: 3 / 3;'] },                  // 2 點
+            { name: 'right', dots: ['grid-area: 1 / 1;', 'grid-area: 2 / 2;', 'grid-area: 3 / 3;'] }, // 3 點
+            { name: 'left', dots: ['grid-area: 1 / 1;', 'grid-area: 1 / 3;', 'grid-area: 3 / 1;', 'grid-area: 3 / 3;'] }, // 4 點
+            { name: 'bottom', dots: ['grid-area: 1 / 1;', 'grid-area: 1 / 3;', 'grid-area: 2 / 2;', 'grid-area: 3 / 1;', 'grid-area: 3 / 3;'] }, // 5 點
+            { name: 'back', dots: ['grid-area: 1 / 1;', 'grid-area: 1 / 3;', 'grid-area: 2 / 1;', 'grid-area: 2 / 3;', 'grid-area: 3 / 1;', 'grid-area: 3 / 3;'] }  // 6 點
+          ];
+
+          facesData.forEach(faceInfo => {
+            const faceDiv = document.createElement('div');
+            faceDiv.className = `face ${faceInfo.name}`;
+            
+            faceInfo.dots.forEach(style => {
+              const dot = document.createElement('div');
+              dot.className = 'dot';
+              dot.setAttribute('style', style);
+              faceDiv.appendChild(dot);
+            });
+            cube.appendChild(faceDiv);
+          });
+
+          scene.appendChild(shadow);
+          scene.appendChild(cube);
+          feltTable.appendChild(scene);
+        }
+      }
+
+      // 5. 更新統計數據 UI
+      function updateStatsUI() {
+        let total = 0;
+        let sum = 0;
+        let maxCount = 0;
+
+        // 計算點數總和與最高次數
+        for (let i = 1; i <= 6; i++) {
+          total += stats[i];
+          sum += stats[i] * i;
+          if (stats[i] > maxCount) {
+            maxCount = stats[i];
+          }
+        }
+
+        const avg = total > 0 ? (sum / total).toFixed(2) : '0.0';
+        document.getElementById('totalRolls').textContent = total;
+        document.getElementById('averageVal').textContent = avg;
+
+        // 更新長條圖寬度與顯示數值
+        for (let i = 1; i <= 6; i++) {
+          const count = stats[i];
+          const valEl = document.getElementById(`val-${i}`);
+          const barEl = document.getElementById(`bar-${i}`);
+          
+          valEl.textContent = count;
+          
+          // 使用相對比例，使最高次數的項目拉滿，其餘按比例顯示，視覺效果最漂亮
+          const percentage = maxCount > 0 ? (count / maxCount) * 100 : 0;
+          barEl.style.width = `${percentage}%`;
+        }
+
+        // 保存資料至 LocalStorage
+        localStorage.setItem('dice_stats', JSON.stringify(stats));
+      }
+
+      // 6. 更新歷史紀錄 UI
+      function updateHistoryUI() {
+        historyList.innerHTML = '';
+        if (history.length === 0) {
+          historyList.innerHTML = '<div class="no-history">尚無紀錄</div>';
+          return;
+        }
+
+        // 最新紀錄顯示在最上方
+        history.slice().reverse().forEach(record => {
+          const row = document.createElement('div');
+          row.className = 'history-row';
+
+          const timeSpan = document.createElement('span');
+          timeSpan.className = 'history-time';
+          timeSpan.textContent = record.time;
+
+          const detailDiv = document.createElement('div');
+          detailDiv.className = 'history-detail';
+          
+          const diceBadgesHtml = record.values
+            .map(val => `<span class="history-dice-badge">${val}</span>`)
+            .join(' + ');
+          
+          detailDiv.innerHTML = `${diceBadgesHtml} = `;
+
+          const sumSpan = document.createElement('span');
+          sumSpan.className = 'history-sum';
+          sumSpan.textContent = record.sum;
+
+          row.appendChild(timeSpan);
+          detailDiv.appendChild(sumSpan);
+          row.appendChild(detailDiv);
+          historyList.appendChild(row);
+        });
+
+        // 保存資料至 LocalStorage
+        localStorage.setItem('dice_history', JSON.stringify(history));
+      }
+
+      // 7. 擲骰子旋轉邏輯核心
+      function rollDice() {
+        // 先初始化/喚醒音效系統 (避免瀏覽器安全機制阻擋)
+        initAudio();
+        
+        rollButton.disabled = true;
+        rollIndex++;
+
+        // 觸發遊戲檯面的震動微動畫
+        feltTable.classList.remove('shaking');
+        // 強制瀏覽器重繪以重新觸發動畫
+        void feltTable.offsetWidth;
+        feltTable.classList.add('shaking');
+
+        // 音效播放
+        playRollSequenceSound();
+
+        const results = [];
+        let sum = 0;
+
+        for (let i = 0; i < diceCount; i++) {
+          const cube = document.getElementById(`cube-${i}`);
+          const shadow = document.getElementById(`shadow-${i}`);
+          
+          // 隨機產生 1 ~ 6 點數
+          const value = Math.floor(Math.random() * 6) + 1;
+          results.push(value);
+          sum += value;
+
+          // 定義各個面要轉到正面所需的 X 與 Y 基礎角度
+          let targetX = 0;
+          let targetY = 0;
+          switch (value) {
+            case 1: targetX = 0; targetY = 0; break;     // Front
+            case 2: targetX = -90; targetY = 0; break;   // Top
+            case 3: targetX = 0; targetY = -90; break;   // Right
+            case 4: targetX = 0; targetY = 90; break;    // Left
+            case 5: targetX = 90; targetY = 0; break;    // Bottom
+            case 6: targetX = 0; targetY = 180; break;   // Back
+          }
+
+          // 核心演算法：加入大量的 360 度的整數倍數旋轉，並乘以當前 rollIndex。
+          // 如此能使骰子保持「一直往前滾」的物理視覺感，而不會往回轉。
+          const extraSpinsX = (Math.floor(Math.random() * 3) + 3) * 360; // 3~5 圈
+          const extraSpinsY = (Math.floor(Math.random() * 3) + 3) * 360; // 3~5 圈
+          
+          // 隨機旋轉 Z 軸 (讓落地點數面產生 0, 90, 180, 270 度的偏移，更寫實)
+          const randomZ = Math.floor(Math.random() * 4) * 90; 
+
+          const finalX = targetX + extraSpinsX + (rollIndex * 1440);
+          const finalY = targetY + extraSpinsY + (rollIndex * 1440);
+          const finalZ = randomZ;
+
+          // 觸發物理彈跳 (跳起並落下) 與旋轉動畫
+          cube.classList.remove('bouncing');
+          shadow.classList.remove('bouncing');
+          void cube.offsetWidth; // 重繪
+          
+          cube.classList.add('bouncing');
+          shadow.classList.add('bouncing');
+
+          // 設定旋轉的 CSS transform 樣式
+          cube.style.transform = `rotateX(${finalX}deg) rotateY(${finalY}deg) rotateZ(${finalZ}deg)`;
+        }
+
+        // 待 1.5 秒旋轉動畫結束後，寫入結果
+        setTimeout(() => {
+          // 1. 更新統計狀態
+          results.forEach(val => {
+            stats[val] = (stats[val] || 0) + 1;
+          });
+          updateStatsUI();
+
+          // 2. 更新歷史紀錄
+          const now = new Date();
+          const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+          
+          history.push({
+            time: timeStr,
+            values: results,
+            sum: sum
+          });
+          
+          // 限制只保留最新 15 筆，防止列表過長
+          if (history.length > 15) {
+            history.shift();
+          }
+          updateHistoryUI();
+
+          // 3. 更新結果橫幅文字
+          resultSum.textContent = `結果總和：${sum} 點`;
+          resultDetail.textContent = `各顆點數：${results.join(', ')}`;
+          
+          // 4. 重置檯面震動 class，並恢復按鈕點擊
+          feltTable.classList.remove('shaking');
+          rollButton.disabled = false;
+        }, 1500);
+      }
+
+      // 8. 事件監聽設定
+      
+      // 骰子數量變更
+      diceCountSelect.addEventListener('change', (e) => {
+        diceCount = parseInt(e.target.value, 10);
+        renderDiceContainers();
+        resultSum.textContent = '準備就緒';
+        resultDetail.textContent = '請點擊下方開始擲骰！';
+      });
+
+      // 主題顏色切換
+      themeSelect.addEventListener('change', (e) => {
+        const theme = e.target.value;
+        // 清除舊主題 class
+        document.body.className = '';
+        if (theme !== 'classic') {
+          document.body.classList.add(`theme-${theme}`);
+        }
+      });
+
+      // 音效切換
+      soundToggle.addEventListener('change', (e) => {
+        soundEnabled = e.target.checked;
+      });
+
+      // 開始擲骰按鈕
       rollButton.addEventListener('click', rollDice);
+
+      // 清除統計數據按鈕
+      clearStatsButton.addEventListener('click', () => {
+        if (confirm('確定要清除所有歷史紀錄與統計數據嗎？')) {
+          stats = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
+          history = [];
+          updateStatsUI();
+          updateHistoryUI();
+          resultSum.textContent = '數據已清空';
+          resultDetail.textContent = '點數統計與歷史紀錄已重新開始。';
+        }
+      });
+
+      // 9. 程式進入點初始化
+      function init() {
+        // 設定選單與狀態同步
+        diceCountSelect.value = diceCount;
+        themeSelect.value = currentTheme;
+        soundToggle.checked = soundEnabled;
+        
+        // 渲染初次骰子
+        renderDiceContainers();
+        
+        // 載入 localStorage 資料
+        updateStatsUI();
+        updateHistoryUI();
+      }
+
+      window.addEventListener('DOMContentLoaded', init);
     </script>
   </body>
 </html>
+
