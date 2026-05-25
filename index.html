@@ -360,7 +360,7 @@
         position: absolute;
         transform-style: preserve-3d;
         /* 預設停止在 1 點的面 */
-        transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg);
+        transform: rotateZ(0deg) rotateX(0deg) rotateY(0deg);
         transition: transform 1.5s cubic-bezier(0.25, 1, 0.5, 1);
       }
 
@@ -1111,7 +1111,7 @@
           shadow.classList.add('bouncing');
 
           // 設定旋轉的 CSS transform 樣式
-          cube.style.transform = `rotateX(${finalX}deg) rotateY(${finalY}deg) rotateZ(${finalZ}deg)`;
+          cube.style.transform = `rotateZ(${finalZ}deg) rotateX(${finalX}deg) rotateY(${finalY}deg)`;
         }
 
         // 待 1.5 秒旋轉動畫結束後，寫入結果
